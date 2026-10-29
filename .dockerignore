@@ -1,0 +1,12 @@
+.git
+.github
+.idea
+.vscode
+target
+*.class
+*.iml
+.env
+.env.*
+README.md
+.gitignore
+.dockerignore
