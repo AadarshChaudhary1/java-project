@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>Everyday Calculators</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Everyday Calculators home">
+      <span class="brand-mark" aria-hidden="true">∑</span>
+      <span>Everyday <strong>Calculators</strong></span>
+    </a>
+    <span class="status"><span class="status-dot"></span> Ready when you are</span>
+  </header>
+
+  <main>
+    <section class="intro">
+      <p class="eyebrow">A little clarity, one calculation at a time</p>
+      <h1>What can we help<br class="desktop-break"> you figure out?</h1>
+      <p class="intro-copy">Choose a calculator below. Enter your values and get a clear result, right away.</p>
+    </section>
+
+    <section class="calculator-grid" aria-label="Calculators">
+      <article class="calculator-card accent-violet">
+        <div class="card-heading"><span class="icon" aria-hidden="true">◉</span><span class="card-tag">HEALTH</span></div>
+        <h2>BMI calculator</h2>
+        <p>Estimate body mass index from your height and weight.</p>
+        <form id="bmi-form" class="calculator-form">
+          <label>Weight <span class="input-with-unit"><input name="weightKg" type="number" min="0.01" step="any" placeholder="70" required><span>kg</span></span></label>
+          <label>Height <span class="input-with-unit"><input name="heightMeters" type="number" min="0.01" step="any" placeholder="1.75" required><span>m</span></span></label>
+          <button type="submit">Calculate BMI <span aria-hidden="true">→</span></button>
+          <output class="result" aria-live="polite"></output>
+        </form>
+      </article>
+
+      <article class="calculator-card accent-blue">
+        <div class="card-heading"><span class="icon" aria-hidden="true">±</span><span class="card-tag">EVERYDAY MATH</span></div>
+        <h2>Math calculator</h2>
+        <p>From the basics to trigonometry, logs and factorials.</p>
+        <form id="math-form" class="calculator-form">
+          <label>Operation
+            <select name="operation" required>
+              <option value="ADD">Addition (+)</option><option value="SUBTRACT">Subtraction (−)</option>
+              <option value="MULTIPLY">Multiplication (×)</option><option value="DIVIDE">Division (÷)</option>
+              <option value="POWER">Power (xʸ)</option><option value="SQRT">Square root (√)</option>
+              <option value="FACTORIAL">Factorial (!)</option><option value="MODULUS">Modulus (%)</option>
+              <option value="SIN">Sine (degrees)</option><option value="COS">Cosine (degrees)</option>
+              <option value="TAN">Tangent (degrees)</option><option value="LOG10">Log base 10</option>
+              <option value="LN">Natural log (ln)</option><option value="ABS">Absolute value</option>
+            </select>
+          </label>
+          <label>First value <input name="firstValue" type="number" step="any" placeholder="Enter a number" required></label>
+          <label id="second-value-label">Second value <input name="secondValue" type="number" step="any" placeholder="Enter a number"></label>
+          <button type="submit">Calculate <span aria-hidden="true">→</span></button>
+          <output class="result" aria-live="polite"></output>
+        </form>
+      </article>
+
+      <article class="calculator-card accent-amber">
+        <div class="card-heading"><span class="icon" aria-hidden="true">?</span><span class="card-tag">TAKE A BREAK</span></div>
+        <h2>Number guessing</h2>
+        <p>There’s a number between 1 and 100. Can you find it?</p>
+        <div class="calculator-form">
+          <button id="start-game" type="button">Start a new game <span aria-hidden="true">→</span></button>
+          <form id="guess-form" class="inline-form">
+            <label class="sr-only" for="guess">Your guess from 1 to 100</label>
+            <input id="guess" name="guess" type="number" min="1" max="100" step="1" placeholder="Your guess (1–100)" required disabled>
+            <button type="submit" class="secondary-button" disabled>Guess</button>
+          </form>
+          <output id="game-result" class="result" aria-live="polite"></output>
+        </div>
+      </article>
+
+      <article class="calculator-card accent-teal">
+        <div class="card-heading"><span class="icon" aria-hidden="true">⇄</span><span class="card-tag">QUICK CONVERT</span></div>
+        <h2>Unit converter</h2>
+        <p>Convert common measures for length, weight, temperature, volume and area.</p>
+        <form id="conversion-form" class="calculator-form">
+          <label>Measurement
+            <select name="category" id="conversion-category">
+              <option value="LENGTH">Length</option><option value="WEIGHT">Weight</option>
+              <option value="TEMPERATURE">Temperature</option><option value="VOLUME">Volume</option>
+              <option value="AREA">Area</option>
+            </select>
+          </label>
+          <label>Convert
+            <select name="conversion" id="conversion-choice"></select>
+          </label>
+          <label>Value <input name="value" type="number" step="any" placeholder="Enter a value" required></label>
+          <button type="submit">Convert <span aria-hidden="true">→</span></button>
+          <output class="result" aria-live="polite"></output>
+        </form>
+      </article>
+
+      <article class="calculator-card accent-coral">
+        <div class="card-heading"><span class="icon" aria-hidden="true">▱</span><span class="card-tag">MEASURE A SURFACE</span></div>
+        <h2>Area calculator</h2>
+        <p>Find the area of a circle, rectangle, triangle or square.</p>
+        <form id="area-form" class="calculator-form geometry-form">
+          <label>Shape
+            <select name="shape">
+              <option value="CIRCLE">Circle</option><option value="RECTANGLE">Rectangle</option>
+              <option value="TRIANGLE">Triangle</option><option value="SQUARE">Square</option>
+            </select>
+          </label>
+          <label class="dimension-one-label">Radius <input name="firstDimension" type="number" min="0.01" step="any" placeholder="Enter a value" required></label>
+          <label class="dimension-two-label hidden">Second dimension <input name="secondDimension" type="number" min="0.01" step="any" placeholder="Enter a value"></label>
+          <button type="submit">Calculate area <span aria-hidden="true">→</span></button>
+          <output class="result" aria-live="polite"></output>
+        </form>
+      </article>
+
+      <article class="calculator-card accent-green">
+        <div class="card-heading"><span class="icon" aria-hidden="true">▰</span><span class="card-tag">MEASURE A SPACE</span></div>
+        <h2>Volume calculator</h2>
+        <p>Calculate volume for a sphere, cube, cylinder, cuboid or cone.</p>
+        <form id="volume-form" class="calculator-form geometry-form">
+          <label>Shape
+            <select name="shape">
+              <option value="SPHERE">Sphere</option><option value="CUBE">Cube</option>
+              <option value="CYLINDER">Cylinder</option><option value="CUBOID">Cuboid</option>
+              <option value="CONE">Cone</option>
+            </select>
+          </label>
+          <label class="dimension-one-label">Radius <input name="firstDimension" type="number" min="0.01" step="any" placeholder="Enter a value" required></label>
+          <label class="dimension-two-label hidden">Second dimension <input name="secondDimension" type="number" min="0.01" step="any" placeholder="Enter a value"></label>
+          <label class="dimension-three-label hidden">Third dimension <input name="thirdDimension" type="number" min="0.01" step="any" placeholder="Enter a value"></label>
+          <button type="submit">Calculate volume <span aria-hidden="true">→</span></button>
+          <output class="result" aria-live="polite"></output>
+        </form>
+      </article>
+    </section>
+  </main>
+
+  <footer><span>Made for curious minds.</span><span>Calculations happen on your device’s application server.</span></footer>
+</body>
+</html>
