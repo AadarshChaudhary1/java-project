@@ -1,277 +1,252 @@
 # Everyday Calculators
 
-A browser-based version of the original Java calculator. The Spring Boot application serves a responsive frontend and JSON REST API from the same process and container. Calculation requests do not require a terminal or store personal data.
+A browser-based version of the original Java calculator, powered by Spring Boot and architected for both standard containerized deployment and serverless deployment to **AWS Lambda with a public Function URL** under the **AWS Free plan**.
+
+The application serves a modern, responsive web frontend and JSON REST API from the same process or serverless handler. Calculations execute in-memory on the backend and do not persist user data.
+
+---
 
 ## Features
 
-- **BMI:** kilograms/meters formula and the original Underweight, Normal weight, Overweight, and Obesity cutoffs.
-- **Math:** addition, subtraction, multiplication, division, exponentiation, square root, factorial, modulus, sine, cosine, tangent, base-10 logarithm, natural logarithm, and absolute value. Trigonometry uses degrees.
-- **Number guessing game:** random integer from 1 to 100, with higher/lower hints and an attempt count.
-- **Unit conversion:** length, weight, temperature, volume, and area conversions using the original conversion factors.
-- **Area:** circle, rectangle, triangle, and square.
-- **Volume:** sphere, cube, cylinder, cuboid, and cone.
-- **Validation:** clear client-side constraints and JSON errors from the API.
+- **BMI Calculator:** Metric height and weight calculations with standard clinical classification thresholds (`Underweight`, `Normal weight`, `Overweight`, and `Obesity`).
+- **Mathematical Calculator:** Operations include basic arithmetic (`ADD`, `SUBTRACT`, `MULTIPLY`, `DIVIDE`), power (`POWER`), square root (`SQRT`), factorial (`FACTORIAL` up to 170), modulus (`MODULUS`), trigonometric functions (`SIN`, `COS`, `TAN` using degrees), logarithms (`LOG10`, `LN`), and absolute value (`ABS`).
+- **Number Guessing Game:** In-memory secret number game (range 1–100) with higher/lower hints, attempt counting, and session state tracking.
+- **Unit Converter:** Conversions for length, weight, temperature, volume, and area using standard physical conversion ratios.
+- **Area Calculator:** Geometric area for Circle, Rectangle, Triangle, and Square.
+- **Volume Calculator:** Geometric volume for Sphere, Cube, Cylinder, Cuboid, and Cone.
+- **Health Check Endpoint:** `GET /api/health` returning `{"status":"UP"}`.
+- **Input Validation:** Client-side constraint enforcement and server-side Jakarta Bean Validation returning structured JSON error messages (`{"error":"..."}`).
 
-The original [Project.java](./Project.java) console source and its existing generated `Project.class` are retained as references. The class file is ignored by Git and Docker and is not used by the Maven build, which compiles the Spring Boot application from `src/main/java`.
+The original [`Project.java`](./Project.java) console application source and its compiled `Project.class` are retained for historical reference. The Maven build compiles the Spring Boot application from `src/main/java`.
 
-## Architecture
+---
+
+## Architectural Design
+
+### 1. Request Flow
 
 ```text
-Browser (HTML/CSS/vanilla JavaScript)
-  ├── GET /                 Spring Boot static resource
-  └── POST /api/...         REST controllers → calculator services
-                               └── in-memory guessing-game state
+Local / Container Execution:
+Browser (HTML/CSS/JS)
+  ├── GET /                 --> Embedded Tomcat --> ResourceHandler (index.html)
+  ├── GET /styles.css       --> Embedded Tomcat --> ResourceHandler (styles.css)
+  ├── GET /app.js           --> Embedded Tomcat --> ResourceHandler (app.js)
+  └── POST /api/...         --> Embedded Tomcat --> DispatcherServlet --> Controllers --> Services
+
+AWS Serverless Execution:
+Browser (HTTPS)
+  │
+  ▼
+AWS Lambda Function URL (Payload v2.0)
+  │
+  ▼
+StreamLambdaHandler (AWS Serverless Java Container)
+  │
+  ▼
+Spring Boot Application Context (In-Memory DispatcherServlet)
+  ├── WelcomePageHandlerMapping / ResourceHttpRequestHandler (HTML, CSS, JS)
+  └── REST Controllers (@RestController) --> Calculator Services (@Service)
 ```
 
-The service classes keep the formulas separate from HTTP handling. Guessing games are held in process memory; a restart or a different ECS task loses that game. The app does not persist requests or user data.
+### 2. Technology Stack
 
-## Technology
+- **Language & Runtime:** Java 25 (LTS)
+- **Framework:** Spring Boot 3.5.3 (Spring MVC, Jakarta Bean Validation)
+- **Serverless Adapter:** AWS Serverless Java Container (`aws-serverless-java-container-springboot3` v2.1.6)
+- **Build & Packaging:** Apache Maven (`spring-boot-maven-plugin` and `maven-shade-plugin`)
+- **Frontend:** Vanilla HTML5, CSS3 (CSS custom properties, CSS grid/flexbox), ES6+ JavaScript (Fetch API)
+- **Containerization:** Multi-stage Dockerfile based on Eclipse Temurin 25 Alpine
+- **CI/CD:** GitHub Actions (Maven verify, Docker build, Lambda artifact generation)
 
-- Java 25 (LTS)
-- Spring Boot 3.5.3, Spring MVC, Jakarta Bean Validation
-- Maven
-- HTML, CSS, vanilla JavaScript
-- Docker multi-stage build; Amazon ECR and ECS Fargate deployment template
+---
 
-## Prerequisites
+## Project Structure
 
+```text
+java-project/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml                 # Automated build, test, Docker check, Lambda packaging
+│       └── aws.yml                # Retained ECS deployment template (manual dispatch)
+├── .aws/
+│   └── task-definition.json       # Retained ECS task definition template
+├── src/
+│   ├── main/
+│   │   ├── java/com/example/calculator/
+│   │   │   ├── CalculatorApplication.java     # Spring Boot application entrypoint
+│   │   │   ├── StreamLambdaHandler.java       # AWS Lambda Function URL stream handler
+│   │   │   ├── controller/
+│   │   │   │   ├── ApiExceptionHandler.java   # Centralized error and validation handling
+│   │   │   │   ├── BmiController.java         # /api/bmi endpoint
+│   │   │   │   ├── ConversionController.java  # /api/conversions endpoint
+│   │   │   │   ├── GeometryController.java    # /api/geometry/area & volume endpoints
+│   │   │   │   ├── GuessingGameController.java# /api/games/guess/... endpoints
+│   │   │   │   ├── HealthController.java      # /api/health endpoint
+│   │   │   │   └── MathController.java        # /api/math endpoint
+│   │   │   └── service/
+│   │   │       ├── BmiService.java
+│   │   │       ├── ConversionService.java
+│   │   │       ├── GeometryService.java
+│   │   │       ├── GuessingGameService.java
+│   │   │       └── MathService.java
+│   │   └── resources/
+│   │       ├── application.properties
+│   │       └── static/
+│   │           ├── index.html     # Responsive calculator UI
+│   │           ├── app.js         # Client-side dynamic interaction & API calls
+│   │           └── styles.css     # Responsive typography and card styling
+│   └── test/
+│       └── java/com/example/calculator/
+│           ├── CalculatorApiTest.java         # Spring MockMvc integration tests
+│           ├── StreamLambdaHandlerTest.java   # Serverless Lambda handler end-to-end tests
+│           └── service/
+│               └── CalculatorServiceTest.java # Pure business logic unit tests
+├── Dockerfile                     # Multi-stage production container build
+├── pom.xml                        # Maven configuration with dual packaging profiles
+└── README.md
+```
+
+---
+
+## Local Development & Execution
+
+### Prerequisites
 - JDK 25 (LTS)
-- Maven 3.6.3 or later
-- Docker Desktop (for container build/run)
+- Apache Maven 3.9+
+- Docker Desktop (optional, for container runs)
 
-No AWS account is needed for local development.
-
-## Run locally
-
-From the repository root:
-
-```powershell
+### Run locally via Spring Boot
+```bash
 mvn spring-boot:run
 ```
-
-Or build and launch the packaged application:
-
-```powershell
-mvn -B verify
+Or build and run the executable jar:
+```bash
+mvn clean package
 java -jar target/java-project-1.0.0.jar
 ```
+Open [http://localhost:8080](http://localhost:8080) in your browser.
 
-The server binds to `0.0.0.0` and defaults to port `8080`. Override the port with `PORT`, for example in PowerShell:
-
-```powershell
-$env:PORT = "9090"
-mvn spring-boot:run
-```
-
-Open [http://localhost:8080](http://localhost:8080) (or the configured port). The health endpoint is [http://localhost:8080/api/health](http://localhost:8080/api/health).
-
-## Build and test
-
-```powershell
-mvn -B test
-mvn -B verify
-```
-
-`verify` runs the service unit tests and Spring MVC API tests and packages the executable JAR.
-
-## Docker
-
-Build and run locally:
-
-```powershell
+### Docker execution
+```bash
 docker build -t everyday-calculators .
 docker run --rm -p 8080:8080 everyday-calculators
 ```
 
-Open [http://localhost:8080](http://localhost:8080). Check container health/API:
+---
 
-```powershell
-docker inspect --format='{{.State.Health.Status}}' (docker ps -q --filter ancestor=everyday-calculators)
-curl.exe http://localhost:8080/api/health
+## Automated Testing
+
+Execute the complete test suite (unit tests, Spring MVC API tests, and AWS Lambda handler tests):
+```bash
+mvn clean verify
 ```
 
-The final image contains only the executable JAR and Java 25 JRE, runs as a non-root user, and includes a health check for `/api/health`. To use another port, set the same container port mapping and environment value, for example `docker run --rm -e PORT=9090 -p 9090:9090 everyday-calculators`.
-
-## REST API
-
-All endpoints are served from the same origin as the website. Successful responses use JSON; invalid requests return HTTP 400 with `{"error":"..."}`.
-
-| Method and path | Request | Result |
-|---|---|---|
-| `GET /api/health` | — | `{"status":"UP"}` |
-| `POST /api/bmi` | `{"weightKg":70,"heightMeters":1.75}` | `{"bmi":22.857142857142858,"category":"Normal weight"}` |
-| `POST /api/math` | `{"operation":"ADD","firstValue":2,"secondValue":3}` | `{"operation":"ADD","result":5.0}` |
-| `POST /api/games/guess/start` | `{}` | `{"gameId":"<id>","message":"A number between 1 and 100 has been chosen."}` |
-| `POST /api/games/guess/{gameId}` | `{"guess":50}` | `{"message":"Too low! Try again.","attempts":1,"correct":false}` |
-| `POST /api/conversions` | `{"category":"LENGTH","conversion":"METERS_TO_FEET","value":1}` | `{"category":"LENGTH","conversion":"METERS_TO_FEET","input":1.0,"result":3.28084}` |
-| `POST /api/geometry/area` | `{"shape":"CIRCLE","firstDimension":2}` | `{"shape":"CIRCLE","result":12.566370614359172}` |
-| `POST /api/geometry/volume` | `{"shape":"CUBOID","firstDimension":2,"secondDimension":3,"thirdDimension":4}` | `{"shape":"CUBOID","result":24.0}` |
-
-Math operations are `ADD`, `SUBTRACT`, `MULTIPLY`, `DIVIDE`, `POWER`, `SQRT`, `FACTORIAL`, `MODULUS`, `SIN`, `COS`, `TAN`, `LOG10`, `LN`, and `ABS`. Unary operations omit `secondValue`. Factorial accepts non-negative integers up to 170 to prevent non-finite results.
-
-Conversion categories are `LENGTH`, `WEIGHT`, `TEMPERATURE`, `VOLUME`, and `AREA`. The conversion enum values are `METERS_TO_FEET`, `FEET_TO_METERS`, `KILOMETERS_TO_MILES`, `MILES_TO_KILOMETERS`, `KILOGRAMS_TO_POUNDS`, `POUNDS_TO_KILOGRAMS`, `GRAMS_TO_OUNCES`, `OUNCES_TO_GRAMS`, `CELSIUS_TO_FAHRENHEIT`, `FAHRENHEIT_TO_CELSIUS`, `CELSIUS_TO_KELVIN`, `KELVIN_TO_CELSIUS`, `LITERS_TO_GALLONS`, `GALLONS_TO_LITERS`, `MILLILITERS_TO_FLUID_OUNCES`, `FLUID_OUNCES_TO_MILLILITERS`, `SQUARE_METERS_TO_SQUARE_FEET`, `SQUARE_FEET_TO_SQUARE_METERS`, `HECTARES_TO_ACRES`, and `ACRES_TO_HECTARES`. Physical conversions require positive input; temperature accepts any finite numeric input, as in the original calculator.
-
-Area shapes: `CIRCLE` and `SQUARE` use `firstDimension`; `RECTANGLE` and `TRIANGLE` also require `secondDimension`. Volume shapes: `SPHERE` and `CUBE` use `firstDimension`; `CYLINDER` and `CONE` also require `secondDimension`; `CUBOID` requires all three dimensions. Dimensions must be positive finite numbers.
-
-Example:
-
-```powershell
-curl.exe -X POST http://localhost:8080/api/math `
-  -H "Content-Type: application/json" `
-  -d '{\"operation\":\"ADD\",\"firstValue\":2,\"secondValue\":3}'
+To run tests and produce both the standalone executable JAR and the shaded AWS Lambda package:
+```bash
+mvn clean verify -P lambda
 ```
 
-## AWS deployment preparation
+Artifacts generated in `target/`:
+- `java-project-1.0.0.jar`: Standard executable Spring Boot JAR with embedded Tomcat (for local/Docker).
+- `java-project-1.0.0-lambda.jar`: Shaded, optimized flat JAR with Tomcat excluded and AWS Serverless Java Container attached (for AWS Lambda).
 
-The deployment workflow is in [`.github/workflows/aws.yml`](./.github/workflows/aws.yml); the Fargate task template is [`.aws/task-definition.json`](./.aws/task-definition.json). A push to `main` runs Maven tests, builds the Docker image, pushes it to ECR, and updates the existing ECS service. It does **not** create AWS resources or a load balancer.
+---
 
-### Required GitHub configuration
+## AWS Deployment Architecture (Free Plan Compatible)
 
-Create a GitHub Actions environment named `production`. Add these **repository/environment variables** (not secrets):
+### Why AWS Lambda + Function URL?
 
-| Variable | Value you supply |
-|---|---|
-| `AWS_REGION` | AWS region where you manually create the resources |
-| `AWS_ROLE_ARN` | ARN of the IAM deployment role trusted for this repository’s OIDC identity |
-| `ECR_REPOSITORY` | Name of your ECR repository |
-| `ECS_CLUSTER` | Name of your ECS cluster |
-| `ECS_SERVICE` | Name of the existing ECS service |
-| `ECS_TASK_EXECUTION_ROLE_ARN` | ARN of the task execution role used by Fargate to pull the image and write logs |
+1. **Strict Cost Control ($0 Idle Cost):**
+   - Traditional container services (ECS Fargate) run continuously. Even a minimal 0.25 vCPU task costs ~$10–$15/month in compute plus hourly charges for public IPv4 addresses ($0.005/hour ≈ $3.60/month). Adding an Application Load Balancer costs ~$16–$22/month.
+   - **AWS Lambda scales to zero.** When no requests are being processed, compute consumption is zero.
+   - The AWS Free Tier provides **1,000,000 free requests per month** and **3.2 million compute seconds** (400,000 GB-seconds) indefinitely.
+2. **Built-in HTTPS Endpoint:**
+   - Lambda Function URLs provide an out-of-the-box secure HTTPS endpoint (`https://<unique-id>.lambda-url.<region>.on.aws/`) with free AWS-managed TLS certificates.
+   - No Application Load Balancer, API Gateway, or CloudFront distribution is strictly required for the core application to function.
+3. **No IAM Identity Provider / OIDC Dependency:**
+   - Accounts on the Free plan displaying *"Feature unavailable — To use this feature, activate advanced features"* cannot configure GitHub Actions OIDC identity providers.
+   - The Lambda deployment package (`java-project-1.0.0-lambda.jar`) is built by GitHub Actions and uploaded manually via the standard AWS Management Console in seconds without any account upgrades or dangerous long-lived access keys.
+4. **Preserves 100% of the Existing Application:**
+   - Spring Boot controllers, services, bean validation, custom exceptions, and static assets (`index.html`, `styles.css`, `app.js`) run identically through `StreamLambdaHandler`.
 
-The workflow fixes the task-definition path (`.aws/task-definition.json`) and container name (`calculator`). No account ID, cluster, service, repository, region, or role name is invented. Missing variables stop the workflow before AWS authentication. Restrict the `production` environment to deployments from the `main` branch, and consider requiring approval. Do not configure long-lived access-key secrets.
+---
 
-### OIDC trust and IAM
+## Step-by-Step AWS Console Deployment Guide
 
-Create an IAM OIDC provider for `https://token.actions.githubusercontent.com` (audience `sts.amazonaws.com`) if the account does not already have it. The deployment role trust policy must restrict both audience and subject to this repository’s `production` environment:
+Follow these exact steps in the [AWS Management Console](https://console.aws.amazon.com/):
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": {
-      "Federated": "arn:aws:iam::<YOUR_ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
-    },
-    "Action": "sts:AssumeRoleWithWebIdentity",
-    "Condition": {
-      "StringEquals": {
-        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-        "token.actions.githubusercontent.com:sub": "repo:AadarshChaudhary1/java-project:environment:production"
-      }
-    }
-  }]
-}
-```
+### Step 1: Download the Deployment Package
+1. Open your GitHub repository in the browser: `https://github.com/AadarshChaudhary1/java-project`.
+2. Navigate to **Actions** -> select the latest run of **Java CI**.
+3. Under the **Artifacts** section at the bottom, download `java-calculator-lambda-package`.
+4. Unzip the downloaded archive to retrieve `java-project-1.0.0-lambda.jar`.
 
-Grant the deployment role only the actions needed for this workflow:
+### Step 2: Create the Lambda Function
+1. Log in to the [AWS Management Console](https://console.aws.amazon.com/).
+2. Select your desired AWS Region in the top-right navbar (e.g., `us-east-1` N. Virginia or `ap-south-1` Mumbai).
+3. Search for and open **Lambda**.
+4. Click **Create function**.
+5. Select **Author from scratch**.
+6. Configure the basic information:
+   - **Function name:** `everyday-calculator`
+   - **Runtime:** `Java 25` (or `Java 21` if your console defaults to 21)
+   - **Architecture:** `x86_64`
+7. Expand **Advanced settings**:
+   - Check **Enable function URL**.
+   - **Auth type:** Select `NONE` (this allows public browser access to your calculator website).
+   - Check **Configure cross-origin resource sharing (CORS)** (optional, defaults are fine as frontend and API are same-origin).
+8. Click **Create function**.
 
-- ECR authentication (`ecr:GetAuthorizationToken`, resource `*`) and image push actions (`ecr:BatchCheckLayerAvailability`, `ecr:CompleteLayerUpload`, `ecr:InitiateLayerUpload`, `ecr:PutImage`, `ecr:UploadLayerPart`) scoped to the one repository.
-- ECS `ecs:RegisterTaskDefinition` and `ecs:DescribeTaskDefinition`, plus `ecs:DescribeServices` and `ecs:UpdateService` scoped to the relevant service/cluster as supported by each action.
-- `iam:PassRole` only for `ECS_TASK_EXECUTION_ROLE_ARN`, conditioned on `iam:PassedToService` being `ecs-tasks.amazonaws.com`.
+### Step 3: Upload the Package & Set the Handler
+1. On the function page, scroll to the **Code source** section.
+2. Click **Upload from** -> select **.zip or .jar file**.
+3. Click **Upload**, select the `java-project-1.0.0-lambda.jar` file from Step 1, and click **Save**.
+4. Scroll down to the **Runtime settings** section and click **Edit**.
+5. Change **Handler** to:
+   ```text
+   com.example.calculator.StreamLambdaHandler::handleRequest
+   ```
+6. Click **Save**.
 
-The following is a deployment-role **permissions policy** example matching the workflow. Replace every `<...>` placeholder with your own account, region, and configured resource values before attaching it; do not paste it unchanged. Keep this deployment role separate from the ECS task execution role.
+### Step 4: Adjust Memory & Timeout
+1. Navigate to the **Configuration** tab -> select **General configuration** -> click **Edit**.
+2. **Memory:** Set to `1024 MB` (provides optimal JVM startup speed within the Free Tier allowance).
+3. **Timeout:** Set to `30 seconds` (to accommodate cold-start Spring context loading).
+4. Click **Save**.
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "AuthenticateToEcr",
-      "Effect": "Allow",
-      "Action": "ecr:GetAuthorizationToken",
-      "Resource": "*",
-      "Condition": {
-        "StringEquals": {
-          "aws:RequestedRegion": "<AWS_REGION>"
-        }
-      }
-    },
-    {
-      "Sid": "PushOnlyToCalculatorRepository",
-      "Effect": "Allow",
-      "Action": [
-        "ecr:BatchCheckLayerAvailability",
-        "ecr:CompleteLayerUpload",
-        "ecr:InitiateLayerUpload",
-        "ecr:PutImage",
-        "ecr:UploadLayerPart"
-      ],
-      "Resource": "arn:aws:ecr:<AWS_REGION>:<AWS_ACCOUNT_ID>:repository/<ECR_REPOSITORY>"
-    },
-    {
-      "Sid": "RegisterTaskDefinition",
-      "Effect": "Allow",
-      "Action": "ecs:RegisterTaskDefinition",
-      "Resource": "*",
-      "Condition": {
-        "StringEquals": {
-          "aws:RequestedRegion": "<AWS_REGION>"
-        }
-      }
-    },
-    {
-      "Sid": "DescribeCalculatorTaskDefinitions",
-      "Effect": "Allow",
-      "Action": "ecs:DescribeTaskDefinition",
-      "Resource": "arn:aws:ecs:<AWS_REGION>:<AWS_ACCOUNT_ID>:task-definition/java-project:*"
-    },
-    {
-      "Sid": "DeployOnlyToCalculatorService",
-      "Effect": "Allow",
-      "Action": [
-        "ecs:DescribeServices",
-        "ecs:UpdateService"
-      ],
-      "Resource": "arn:aws:ecs:<AWS_REGION>:<AWS_ACCOUNT_ID>:service/<ECS_CLUSTER>/<ECS_SERVICE>"
-    },
-    {
-      "Sid": "PassOnlyTaskExecutionRoleToEcs",
-      "Effect": "Allow",
-      "Action": "iam:PassRole",
-      "Resource": "<ECS_TASK_EXECUTION_ROLE_ARN>",
-      "Condition": {
-        "StringEquals": {
-          "iam:PassedToService": "ecs-tasks.amazonaws.com"
-        }
-      }
-    }
-  ]
-}
-```
+### Step 5: Test the Website
+1. Go back to the function overview.
+2. Locate the **Function URL** (format: `https://<random-id>.lambda-url.<region>.on.aws/`).
+3. Click the link to open it in any desktop or mobile browser.
+4. Verify the following:
+   - The homepage loads with full styling and fonts.
+   - Test BMI calculation: enter 70 kg, 1.75 m -> should output `BMI: 22.9 · Normal weight`.
+   - Test Math calculation: 2 + 3 -> should output `Result: 5`.
+   - Test Health endpoint: append `/api/health` to the URL -> should output `{"status":"UP"}`.
 
-The separate ECS task execution role needs the `ecs-tasks.amazonaws.com` trust relationship and ECR image-pull/CloudWatch Logs write permissions (the AWS-managed `AmazonECSTaskExecutionRolePolicy` is a convenient baseline). Do not give the app a task role unless it later needs AWS API access.
+---
 
-### Resources to create manually
+## Monitoring, Cost Control & Cleanup
 
-Before the first deployment, create/configure these in your account; the workflow deliberately does not provision them:
+### Cost Risks & Safeguards
+- **Scale-to-Zero:** Lambda only bills for active execution time (rounded to the nearest millisecond). Zero visitors = $0 compute charges.
+- **Data Transfer:** AWS Free Tier includes 100 GB of outbound data transfer per month.
+- **CloudWatch Logs:** Lambda streams logs to `/aws/lambda/everyday-calculator`. The Free Tier includes 5 GB of log ingestion. To avoid lingering log storage costs:
+  - In CloudWatch Console -> **Log groups** -> click `/aws/lambda/everyday-calculator` -> **Actions** -> **Edit retention setting** -> change from *Never expire* to **7 days** or **1 day**.
 
-1. An ECR repository.
-2. The GitHub OIDC provider and least-privilege deployment IAM role, and the ECS task execution role.
-3. An ECS cluster, Fargate task/service, VPC, public subnet(s), and security group. Configure the service to assign a public IP if it should be reachable without a load balancer; allow inbound TCP 8080 only from the audience that needs access.
-4. A CloudWatch log group named `/ecs/java-project` with a short retention period (for example, 7 days). The task definition writes logs there.
+### How to Clean Up and Avoid Any Future Charges
+If you ever wish to decommission the website:
+1. Open **AWS Lambda** in the AWS Console.
+2. Select `everyday-calculator` -> click **Actions** -> **Delete function**.
+3. Open **CloudWatch** -> **Log groups** -> select `/aws/lambda/everyday-calculator` -> **Actions** -> **Delete log group(s)**.
+4. Open **IAM** -> **Roles** -> search for `everyday-calculator-role-...` (auto-generated during Lambda creation) -> click **Delete**.
+Every associated resource is now completely removed with zero lingering charges.
 
-There is **no load balancer or TLS endpoint** in this template. With no load balancer, the task's public IP can change after redeployment/replacement and direct HTTP access is not suitable for sensitive data. A stable hostname and HTTPS require additional infrastructure, commonly a load balancer and certificate, and can add charges. Do not add these unless you choose to accept their cost.
+---
 
-### Free-plan and cost notes
+## Known Limitations
 
-You reported having a Free plan and $120 in credits expiring April 28, 2027. I cannot inspect your AWS account or verify the offer's eligibility, expiration, or remaining balance. AWS account offers vary and credits have service/region/expiration conditions; a Free plan or remaining credits do not guarantee that each resource below is free. Confirm the current balance and expiry in your AWS Billing console, review regional pricing, and set cost alerts before creating resources. The GitHub workflow does not contact AWS until you configure OIDC and push to `main`.
-
-Potential metered usage to check against your credits and current regional pricing:
-
-- **Fargate:** vCPU and memory are billed while tasks run; a continuously running service accrues usage. ECS control-plane use does not make the compute free.
-- **Public IPv4:** a public IP assigned to a running task can be charged by the hour.
-- **Load balancer:** not created by this project; ALB hours and capacity units may add ongoing charges if you add one.
-- **ECR:** image storage is metered; keep only needed tags and remove old images.
-- **CloudWatch Logs:** ingestion and retained storage may be charged. Configure short log retention.
-- **Networking:** outbound data transfer may be charged; NAT Gateways can be a significant additional cost and are not required by the suggested public-subnet setup.
-- **GitHub Actions:** usage may count against GitHub's plan limits; AWS usage during deployment is separate.
-
-Use the AWS pricing pages and Billing/Cost Explorer for your region and account, and verify costs before proceeding. Credits can be consumed by these services.
-
-### Cleanup
-
-To stop ongoing AWS charges when finished, manually scale the ECS service to zero or delete it, remove idle task/network resources and any load balancer or NAT Gateway you added, delete the ECR images/repository when no longer needed, and delete or retain the CloudWatch log group intentionally. Review billing after cleanup; deleting a service alone does not remove every related resource.
-
-## Git hygiene
-
-`.gitignore` excludes compiled classes, Maven output, IDE settings, and local environment files. `.dockerignore` keeps Git metadata, credentials/environment files, IDE files, generated classes, and documentation out of the Docker build context. The original source remains; only its committed generated `.class` artifact is removed.
+1. **Number Guessing Game Session Persistence:**
+   - Active guessing games are stored in JVM memory (`ConcurrentHashMap`). In serverless execution, state persists while the Lambda execution environment remains warm. If the environment scales to zero or rotates, an ongoing game session resets and prompts the player to click *Start a new game*. This matches the stateless design of modern web calculators.
+2. **Cold Starts:**
+   - The first request after a period of inactivity may experience a 3–6 second cold start while the JVM initializes the Spring Boot application context. Subsequent requests execute in 15–50 ms. Enabling AWS Lambda SnapStart eliminates cold-start latency.

@@ -14,10 +14,11 @@
     <artifactId>java-project</artifactId>
     <version>1.0.0</version>
     <name>java-project</name>
-    <description>Browser-based calculator powered by Spring Boot</description>
+    <description>Browser-based calculator powered by Spring Boot and deployable to AWS Lambda</description>
 
     <properties>
         <java.version>25</java.version>
+        <aws.serverless.version>2.1.6</aws.serverless.version>
     </properties>
 
     <dependencies>
@@ -28,6 +29,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws.serverless</groupId>
+            <artifactId>aws-serverless-java-container-springboot3</artifactId>
+            <version>${aws.serverless.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -44,4 +50,42 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>lambda</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                        <version>3.5.2</version>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>lambda</shadedClassifierName>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>org.apache.tomcat.embed:*</exclude>
+                                </excludes>
+                            </artifactSet>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    <resource>META-INF/services/org.springframework.boot.autoconfigure.AutoConfiguration.imports</resource>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>shade</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

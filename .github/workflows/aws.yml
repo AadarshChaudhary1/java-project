@@ -1,8 +1,11 @@
-name: Build and deploy to Amazon ECS
+name: Build and deploy to Amazon ECS (Manual Reference)
 
+# DISABLED AUTOMATIC TRIGGER:
+# Automatic ECS deployment on push to main is disabled because IAM OIDC Identity Providers
+# are unavailable on the AWS Free plan without activating advanced features/account upgrade.
+# This workflow and .aws/task-definition.json are preserved for architectural reference.
 on:
-  push:
-    branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
